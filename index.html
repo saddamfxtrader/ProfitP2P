@@ -2,14 +2,30 @@
 <html lang="bn">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>P2P USDT/BDT Trade Calculator</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>P2P Calculator</title>
+
+    <!-- ===== PWA META ===== -->
+    <meta name="theme-color" content="#0b1a33">
+    <meta name="description" content="P2P USDT/BDT Trade Calculator — Binance, Bitget, Bybit">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="P2P Calculator">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="application-name" content="P2P Calculator">
+
+    <!-- Inline manifest (data URI) -->
+    <link rel="manifest" id="appManifest">
+    <link rel="apple-touch-icon" id="appleIcon">
+    <link rel="icon" id="favIcon">
+
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
             font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            -webkit-tap-highlight-color: transparent;
         }
 
         body {
@@ -336,6 +352,30 @@
             color: #b91c1c;
         }
 
+        /* Toast */
+        .toast {
+            position: fixed;
+            left: 50%;
+            bottom: 24px;
+            transform: translateX(-50%) translateY(80px);
+            background: #0b1a33;
+            color: #fff;
+            padding: 10px 20px;
+            border-radius: 40px;
+            font-size: 13px;
+            font-weight: 500;
+            box-shadow: 0 8px 24px rgba(0, 20, 50, 0.25);
+            opacity: 0;
+            transition: all 0.3s ease;
+            z-index: 9999;
+            pointer-events: none;
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
         @media (max-width: 480px) {
             .fee-grid {
                 grid-template-columns: 1fr;
@@ -382,7 +422,7 @@
                 <input type="number" id="usdtQty" value="1000" step="1" placeholder="1000">
             </div>
             <div class="input-group">
-                <label>বিনিয়োগ (BDT)</label>
+                <label>বিনিয়োগ (BDT)</label>
                 <input type="number" id="investmentBdt" value="118500" step="100" placeholder="118500">
             </div>
         </div>
@@ -391,7 +431,7 @@
         <div class="fee-section">
             <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
                 <span style="font-weight: 500; font-size: 14px;">ফি ও খরচ</span>
-                <span style="font-size: 12px; color: #6b7f9b;">শূন্য রাখুন যদি প্রযোজ্য না হয়</span>
+                <span style="font-size: 12px; color: #6b7f9b;">শূন্য রাখুন যদি প্রযোজ্য না হয়</span>
             </div>
             <div class="fee-grid">
                 <div class="fee-item"><span>Buy Fee</span> <input type="number" id="buyFee" value="0" step="0.01" placeholder="0"></div>
@@ -421,8 +461,8 @@
                 </div>
                 <div class="result-item"><div class="label">Profit / USDT</div><div class="value" id="profitPerUsdt">৳ 0.00</div></div>
                 <div class="result-item"><div class="label">ROI (%)</div><div class="value" id="roiDisplay">0.00%</div></div>
-                <div class="result-item"><div class="label">মোট বিনিয়োগ</div><div class="value" id="totalInvestmentDisplay">৳ 0</div></div>
-                <div class="result-item"><div class="label">মোট আয়</div><div class="value" id="totalRevenueDisplay">৳ 0</div></div>
+                <div class="result-item"><div class="label">মোট বিনিয়োগ</div><div class="value" id="totalInvestmentDisplay">৳ 0</div></div>
+                <div class="result-item"><div class="label">মোট আয়</div><div class="value" id="totalRevenueDisplay">৳ 0</div></div>
                 <div class="result-item"><div class="label">মোট ফি ও খরচ</div><div class="value" id="totalCostDisplay">৳ 0</div></div>
                 <div class="result-item"><div class="label">Break-even Sell</div><div class="value" id="beSellDisplay">৳ 0.00</div></div>
                 <div class="result-item"><div class="label">Max Buy (break-even)</div><div class="value" id="beBuyDisplay">৳ 0.00</div></div>
@@ -464,13 +504,89 @@
     </div>
 </div>
 
+<!-- toast -->
+<div class="toast" id="toast"></div>
+
+<!-- ============ INLINE ICON (SVG data URI) ============ -->
+<script>
+    /* Build an inline SVG icon (data URI) used for favicon, apple-touch-icon and manifest */
+    (function buildIcon() {
+        const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+            <rect width="512" height="512" rx="96" fill="#0b1a33"/>
+            <text x="50%" y="47%" font-family="Segoe UI, Arial, sans-serif" font-size="150" font-weight="700"
+                  fill="#ffffff" text-anchor="middle" dominant-baseline="middle">P2P</text>
+            <text x="50%" y="72%" font-family="Segoe UI, Arial, sans-serif" font-size="80" font-weight="600"
+                  fill="#7fb2ff" text-anchor="middle" dominant-baseline="middle">৳</text>
+        </svg>`;
+        const dataUri = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+        const dataUriB64 = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svg)));
+
+        document.getElementById('favIcon').href = dataUri;
+        document.getElementById('appleIcon').href = dataUriB64;
+
+        /* Inline manifest (data: URL JSON) */
+        const manifest = {
+            name: "P2P Calculator",
+            short_name: "P2P Calculator",
+            description: "P2P USDT/BDT Trade Calculator",
+            start_url: ".",
+            scope: ".",
+            display: "standalone",
+            orientation: "portrait",
+            background_color: "#f4f7fc",
+            theme_color: "#0b1a33",
+            lang: "bn",
+            icons: [
+                { src: dataUri, sizes: "192x192", type: "image/svg+xml", purpose: "any" },
+                { src: dataUri, sizes: "512x512", type: "image/svg+xml", purpose: "any" },
+                { src: dataUri, sizes: "any",     type: "image/svg+xml", purpose: "maskable" }
+            ]
+        };
+        const manifestBlob = new Blob([JSON.stringify(manifest)], { type: 'application/manifest+json' });
+        const manifestUrl = URL.createObjectURL(manifestBlob);
+        document.getElementById('appManifest').href = manifestUrl;
+    })();
+</script>
+
 <script>
     (function() {
-        // ----- state -----
+        'use strict';
+
+        /* =========================================================
+           STORAGE KEYS
+           ========================================================= */
+        const STORAGE_KEY = 'p2pCalcState_v1';
+        const HISTORY_KEY = 'p2pCalcHistory_v1';
+
+        /* List of persistent input IDs */
+        const INPUT_IDS = [
+            'buyPrice', 'sellPrice',
+            'usdtQty', 'investmentBdt',
+            'buyFee', 'sellFee', 'paymentFee', 'networkFee',
+            'slippagePct', 'otherCost'
+        ];
+
+        /* ----- Safe storage wrappers ----- */
+        const storage = {
+            get(key, fallback) {
+                try {
+                    const raw = localStorage.getItem(key);
+                    return raw ? JSON.parse(raw) : fallback;
+                } catch (e) { return fallback; }
+            },
+            set(key, val) {
+                try { localStorage.setItem(key, JSON.stringify(val)); } catch (e) {}
+            },
+            remove(key) {
+                try { localStorage.removeItem(key); } catch (e) {}
+            }
+        };
+
+        /* ----- state ----- */
         let mode = 'buy'; // 'buy' or 'sell'
         let history = [];
 
-        // DOM refs
+        /* DOM refs */
         const buyPriceInput = document.getElementById('buyPrice');
         const sellPriceInput = document.getElementById('sellPrice');
         const usdtQtyInput = document.getElementById('usdtQty');
@@ -499,24 +615,71 @@
         const tradeModeBadge = document.getElementById('tradeModeBadge');
         const historyList = document.getElementById('historyList');
         const historyCount = document.getElementById('historyCount');
+        const toastEl = document.getElementById('toast');
 
-        // ----- helpers -----
+        /* ----- helpers ----- */
         function getVal(id) { return parseFloat(document.getElementById(id).value) || 0; }
-
         function fmt(n) { return '৳ ' + n.toFixed(2); }
-
         function fmtInt(n) { return '৳ ' + Math.round(n).toLocaleString(); }
-
         function fmtPct(n) { return n.toFixed(2) + '%'; }
 
-        // ----- core calculation -----
+        function showToast(msg) {
+            toastEl.textContent = msg;
+            toastEl.classList.add('show');
+            clearTimeout(showToast._t);
+            showToast._t = setTimeout(() => toastEl.classList.remove('show'), 2200);
+        }
+
+        /* =========================================================
+           PERSISTENCE — SAVE & RESTORE
+           ========================================================= */
+        function saveState() {
+            const state = { mode };
+            INPUT_IDS.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) state[id] = el.value;
+            });
+            storage.set(STORAGE_KEY, state);
+        }
+
+        function restoreState() {
+            const state = storage.get(STORAGE_KEY, null);
+            if (!state) return false;
+            if (state.mode) {
+                mode = state.mode === 'sell' ? 'sell' : 'buy';
+            }
+            INPUT_IDS.forEach(id => {
+                const el = document.getElementById(id);
+                if (el && state[id] !== undefined && state[id] !== null) {
+                    el.value = state[id];
+                }
+            });
+            return true;
+        }
+
+        function saveHistory() {
+            storage.set(HISTORY_KEY, history);
+        }
+
+        function restoreHistory() {
+            const h = storage.get(HISTORY_KEY, null);
+            if (Array.isArray(h)) history = h;
+        }
+
+        function clearAllStorage() {
+            storage.remove(STORAGE_KEY);
+            storage.remove(HISTORY_KEY);
+        }
+
+        /* =========================================================
+           CORE CALCULATION
+           ========================================================= */
         function calculate() {
             const buyPrice = getVal('buyPrice');
             const sellPrice = getVal('sellPrice');
             let usdtQty = getVal('usdtQty');
             let investment = getVal('investmentBdt');
 
-            // auto-calc quantity from investment if investment > 0 and usdtQty == 0
             if (investment > 0 && usdtQty === 0 && buyPrice > 0) {
                 usdtQty = investment / buyPrice;
             } else if (usdtQty > 0 && buyPrice > 0 && investment === 0) {
@@ -528,12 +691,10 @@
                 usdtQty = investment / buyPrice;
             }
 
-            // if investment is 0 but usdtQty set
             if (investment === 0 && usdtQty > 0 && buyPrice > 0) {
                 investment = usdtQty * buyPrice;
             }
 
-            // fees
             const buyFee = getVal('buyFee');
             const sellFee = getVal('sellFee');
             const paymentFee = getVal('paymentFee');
@@ -541,61 +702,44 @@
             const otherCost = getVal('otherCost');
             const slippagePct = getVal('slippagePct') / 100;
 
-            // gross
             const buyCost = usdtQty * buyPrice;
             const sellRevenue = usdtQty * sellPrice;
             const grossProfit = sellRevenue - buyCost;
 
-            // total fees (fixed)
             const totalFixedFees = buyFee + sellFee + paymentFee + networkFee + otherCost;
-            const slippageCost = Math.abs(grossProfit) * slippagePct; // conservative
+            const slippageCost = Math.abs(grossProfit) * slippagePct;
             const totalCost = totalFixedFees + slippageCost;
             let netProfit = grossProfit - totalCost;
 
-            // cap to avoid negative investment
             if (netProfit < -investment) netProfit = -investment;
 
             const roi = (investment > 0) ? (netProfit / investment) * 100 : 0;
             const profitPerUsdt = (usdtQty > 0) ? netProfit / usdtQty : 0;
 
-            // break-even sell price (including fees)
             let beSell = 0;
             let beBuy = 0;
             if (usdtQty > 0 && buyPrice > 0) {
                 const totalCostPerUsdt = (totalFixedFees + slippageCost) / usdtQty;
-                beSell = buyPrice + (totalCostPerUsdt);
-                // max buy to break even at current sell
-                beBuy = sellPrice - (totalCostPerUsdt);
+                beSell = buyPrice + totalCostPerUsdt;
+                beBuy = sellPrice - totalCostPerUsdt;
                 if (beBuy < 0) beBuy = 0;
             }
 
             return {
-                buyPrice,
-                sellPrice,
-                usdtQty,
-                investment,
-                buyCost,
-                sellRevenue,
-                grossProfit,
-                totalFixedFees,
-                slippageCost,
-                totalCost,
-                netProfit,
-                roi,
-                profitPerUsdt,
-                beSell,
-                beBuy
+                buyPrice, sellPrice, usdtQty, investment,
+                buyCost, sellRevenue, grossProfit,
+                totalFixedFees, slippageCost, totalCost,
+                netProfit, roi, profitPerUsdt, beSell, beBuy
             };
         }
 
-        // ----- render result -----
+        /* =========================================================
+           RENDER RESULT
+           ========================================================= */
         function renderResult() {
             const result = calculate();
-
-            // show result area
             resultArea.classList.remove('hidden');
 
-            // update values
             const isProfit = result.netProfit >= 0;
             netProfitDisplay.textContent = fmt(result.netProfit);
             netProfitDisplay.className = 'value ' + (isProfit ? 'positive' : 'negative');
@@ -617,7 +761,6 @@
             slippageCostDisplay.textContent = fmt(result.slippageCost);
             netProfitBreakdown.textContent = fmt(result.netProfit);
 
-            // warning
             warningBox.classList.add('hidden');
             if (result.netProfit < 0) {
                 warningBox.textContent = '⚠️ এই ট্রেডে সম্ভাব্য ক্ষতি হবে। Break-even price দেখে নিন।';
@@ -626,17 +769,18 @@
                 warningBox.textContent = 'ℹ️ মুনাফা খুব কম। ফি বা স্লিপেজ পরীক্ষা করুন।';
                 warningBox.classList.remove('hidden');
             } else if (result.grossProfit > 0 && result.totalCost > Math.abs(result.grossProfit) * 0.3) {
-                warningBox.textContent = '🧾 ফি ও খরচ মুনাফার তুলনায় বেশি। নেট লাভ কম হতে পারে।';
+                warningBox.textContent = '🧾 ফি ও খরচ মুনাফার তুলনায় বেশি। নেট লাভ কম হতে পারে।';
                 warningBox.classList.remove('hidden');
             }
 
             tradeModeBadge.textContent = mode === 'buy' ? 'BUY → SELL' : 'SELL → BUY';
 
-            // add to history
             addHistory(result);
         }
 
-        // ----- history -----
+        /* =========================================================
+           HISTORY
+           ========================================================= */
         function addHistory(result) {
             const entry = {
                 time: new Date().toLocaleTimeString(),
@@ -648,6 +792,7 @@
             };
             history.unshift(entry);
             if (history.length > 20) history.pop();
+            saveHistory();
             renderHistory();
         }
 
@@ -663,15 +808,17 @@
                 div.className = 'history-item';
                 const sign = h.net >= 0 ? 'win' : 'loss';
                 div.innerHTML = `
-                    <span>#${idx+1} ${h.buy.toFixed(2)} → ${h.sell.toFixed(2)} · ${h.qty.toFixed(0)} USDT</span>
+                    <span>#${idx + 1} ${h.buy.toFixed(2)} → ${h.sell.toFixed(2)} · ${h.qty.toFixed(0)} USDT</span>
                     <span class="${sign}">${h.net >= 0 ? '+' : ''}${h.net.toFixed(2)} ৳ (${h.roi.toFixed(2)}%)</span>
                 `;
                 historyList.appendChild(div);
             });
         }
 
-        // ----- mode toggle -----
-        function setMode(newMode) {
+        /* =========================================================
+           MODE TOGGLE
+           ========================================================= */
+        function setMode(newMode, skipCalc) {
             mode = newMode;
             document.querySelectorAll('.toggle-btn').forEach(btn => {
                 btn.classList.toggle('active', btn.dataset.mode === mode);
@@ -685,60 +832,72 @@
                 buyLabel.textContent = 'Sell Price (BDT)';
                 sellLabel.textContent = 'Buy Price (BDT)';
             }
-            // recalc if result shown
-            if (!resultArea.classList.contains('hidden')) renderResult();
+            saveState();
+            if (!skipCalc && !resultArea.classList.contains('hidden')) renderResult();
         }
 
-        // ----- reset -----
+        /* =========================================================
+           RESET
+           ========================================================= */
         function resetCalculator() {
+            // clear storage first
+            clearAllStorage();
+
             document.querySelectorAll('input').forEach(inp => {
                 if (inp.id === 'buyPrice') inp.value = '118.50';
                 else if (inp.id === 'sellPrice') inp.value = '119.20';
                 else if (inp.id === 'usdtQty') inp.value = '1000';
                 else if (inp.id === 'investmentBdt') inp.value = '118500';
-                else if (inp.id === 'buyFee' || inp.id === 'sellFee' || inp.id === 'paymentFee' || inp.id === 'networkFee' || inp.id === 'otherCost') inp.value = '0';
+                else if (['buyFee', 'sellFee', 'paymentFee', 'networkFee', 'otherCost'].includes(inp.id)) inp.value = '0';
                 else if (inp.id === 'slippagePct') inp.value = '0.2';
             });
+
+            setMode('buy', true);
             resultArea.classList.add('hidden');
-            // clear history
             history = [];
             renderHistory();
+            saveState();
+
+            showToast('সব ভ্যালু রিসেট হয়েছে');
         }
 
-        // ----- copy result -----
+        /* =========================================================
+           COPY RESULT
+           ========================================================= */
         function copyResult() {
             const result = calculate();
             const text = `
-        P2P Trade Result
-        Buy: ${result.buyPrice.toFixed(2)} BDT | Sell: ${result.sellPrice.toFixed(2)} BDT
-        USDT: ${result.usdtQty.toFixed(2)} | Investment: ${result.investment.toFixed(2)} BDT
-        Gross Profit: ${result.grossProfit.toFixed(2)} BDT
-        Fees & Costs: ${result.totalCost.toFixed(2)} BDT
-        Net Profit: ${result.netProfit.toFixed(2)} BDT
-        ROI: ${result.roi.toFixed(2)}%
-        Profit/USDT: ${result.profitPerUsdt.toFixed(2)} BDT
-        Break-even Sell: ${result.beSell.toFixed(2)} BDT
+P2P Trade Result
+Buy: ${result.buyPrice.toFixed(2)} BDT | Sell: ${result.sellPrice.toFixed(2)} BDT
+USDT: ${result.usdtQty.toFixed(2)} | Investment: ${result.investment.toFixed(2)} BDT
+Gross Profit: ${result.grossProfit.toFixed(2)} BDT
+Fees & Costs: ${result.totalCost.toFixed(2)} BDT
+Net Profit: ${result.netProfit.toFixed(2)} BDT
+ROI: ${result.roi.toFixed(2)}%
+Profit/USDT: ${result.profitPerUsdt.toFixed(2)} BDT
+Break-even Sell: ${result.beSell.toFixed(2)} BDT
             `.trim();
             navigator.clipboard.writeText(text).then(() => {
-                alert('ফলাফল কপি করা হয়েছে!');
+                showToast('ফলাফল কপি করা হয়েছে!');
             }).catch(() => {
-                alert('কপি করতে ব্যর্থ, ম্যানুয়ালি কপি করুন।');
+                showToast('কপি করতে ব্যর্থ, ম্যানুয়ালি কপি করুন।');
             });
         }
 
-        // ----- event binding -----
+        /* =========================================================
+           EVENT BINDING
+           ========================================================= */
         document.getElementById('modeBuyBtn').addEventListener('click', () => setMode('buy'));
         document.getElementById('modeSellBtn').addEventListener('click', () => setMode('sell'));
-
         document.getElementById('calculateBtn').addEventListener('click', renderResult);
-
         document.getElementById('resetBtn').addEventListener('click', resetCalculator);
-
         document.getElementById('copyResultBtn').addEventListener('click', copyResult);
 
         document.getElementById('clearHistoryBtn').addEventListener('click', () => {
             history = [];
+            storage.remove(HISTORY_KEY);
             renderHistory();
+            showToast('হিস্টোরি মুছে ফেলা হয়েছে');
         });
 
         // link investment <-> quantity
@@ -748,6 +907,7 @@
             if (buyPrice > 0 && qty > 0) {
                 investmentBdtInput.value = (qty * buyPrice).toFixed(2);
             }
+            saveState();
         });
 
         investmentBdtInput.addEventListener('input', function() {
@@ -756,14 +916,77 @@
             if (buyPrice > 0 && inv > 0) {
                 usdtQtyInput.value = (inv / buyPrice).toFixed(4);
             }
+            saveState();
         });
 
-        // initial render
-        renderHistory();
-        // default auto-calc
-        setTimeout(() => {
-            renderResult();
-        }, 100);
+        /* Save on every input change */
+        INPUT_IDS.forEach(id => {
+            const el = document.getElementById(id);
+            if (!el) return;
+            el.addEventListener('input', saveState);
+            el.addEventListener('change', saveState);
+        });
+
+        /* Save before leaving */
+        window.addEventListener('beforeunload', saveState);
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'hidden') saveState();
+        });
+
+        /* =========================================================
+           INIT
+           ========================================================= */
+        (function init() {
+            const restored = restoreState();
+            restoreHistory();
+            setMode(mode, true);   // apply labels + toggle active state
+            renderHistory();
+
+            if (restored) {
+                // If any saved state existed → don't auto-add history entry on load
+                // but still show result area if inputs are valid
+                renderResult();
+                // remove the auto-added history entry from initial render
+                history.shift();
+                saveHistory();
+                renderHistory();
+            } else {
+                setTimeout(() => renderResult(), 100);
+            }
+        })();
+
+        /* =========================================================
+           SERVICE WORKER (inline Blob — best-effort offline)
+           ========================================================= */
+        (function registerSW() {
+            if (!('serviceWorker' in navigator)) return;
+            // Only works when served over http(s) (not file://)
+            if (location.protocol !== 'http:' && location.protocol !== 'https:') return;
+
+            const swCode = `
+                const CACHE = 'p2p-calc-v1';
+                self.addEventListener('install', e => { self.skipWaiting(); });
+                self.addEventListener('activate', e => { e.waitUntil(self.clients.claim()); });
+                self.addEventListener('fetch', e => {
+                    if (e.request.method !== 'GET') return;
+                    e.respondWith(
+                        caches.match(e.request).then(cached => {
+                            const fetchPromise = fetch(e.request).then(res => {
+                                const copy = res.clone();
+                                caches.open(CACHE).then(c => c.put(e.request, copy)).catch(()=>{});
+                                return res;
+                            }).catch(() => cached);
+                            return cached || fetchPromise;
+                        })
+                    );
+                });
+            `;
+            try {
+                const blob = new Blob([swCode], { type: 'application/javascript' });
+                const swUrl = URL.createObjectURL(blob);
+                navigator.serviceWorker.register(swUrl).catch(() => {});
+            } catch (e) { /* ignore */ }
+        })();
     })();
 </script>
 </body>
