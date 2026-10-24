@@ -1,9 +1,13 @@
 <!DOCTYPE html>
-<html lang="bn">
+<html lang="bn" translate="no" class="notranslate">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>P2P Calculator</title>
+
+    <!-- ===== Google Translate OFF ===== -->
+    <meta name="google" content="notranslate">
+    <meta name="google-translate-customization" content="none">
 
     <!-- ===== PWA META ===== -->
     <meta name="theme-color" content="#0b1a33">
@@ -20,6 +24,11 @@
     <link rel="icon" id="favIcon">
 
     <style>
+        /* ===== Google Translate পপআপ বন্ধ ===== */
+        .notranslate, .notranslate * {
+            translate: no !important;
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -387,7 +396,7 @@
         }
     </style>
 </head>
-<body>
+<body class="notranslate">
 <div class="app-container" id="app">
 
     <!-- header -->
@@ -507,9 +516,8 @@
 <!-- toast -->
 <div class="toast" id="toast"></div>
 
-<!-- ============ INLINE ICON (SVG data URI) ============ -->
+<!-- ============ INLINE ICON + MANIFEST ============ -->
 <script>
-    /* Build an inline SVG icon (data URI) used for favicon, apple-touch-icon and manifest */
     (function buildIcon() {
         const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
             <rect width="512" height="512" rx="96" fill="#0b1a33"/>
@@ -524,7 +532,6 @@
         document.getElementById('favIcon').href = dataUri;
         document.getElementById('appleIcon').href = dataUriB64;
 
-        /* Inline manifest (data: URL JSON) */
         const manifest = {
             name: "P2P Calculator",
             short_name: "P2P Calculator",
@@ -548,6 +555,28 @@
     })();
 </script>
 
+<!-- ============ GOOGLE TRANSLATE BAR REMOVER ============ -->
+<script>
+    (function killTranslate() {
+        const kill = () => {
+            document.querySelectorAll(
+                '.goog-te-banner-frame, .skiptranslate > iframe, iframe.goog-te-banner-frame, #goog-gt-tt, .goog-te-balloon-frame'
+            ).forEach(el => el.remove());
+            if (document.body) document.body.style.top = '0px';
+            document.documentElement.style.marginTop = '0px';
+        };
+        kill();
+        try {
+            const obs = new MutationObserver(kill);
+            obs.observe(document.documentElement, { childList: true, subtree: true });
+        } catch (e) {}
+        setTimeout(kill, 500);
+        setTimeout(kill, 1500);
+        setTimeout(kill, 3000);
+    })();
+</script>
+
+<!-- ============ MAIN APP LOGIC ============ -->
 <script>
     (function() {
         'use strict';
@@ -558,7 +587,6 @@
         const STORAGE_KEY = 'p2pCalcState_v1';
         const HISTORY_KEY = 'p2pCalcHistory_v1';
 
-        /* List of persistent input IDs */
         const INPUT_IDS = [
             'buyPrice', 'sellPrice',
             'usdtQty', 'investmentBdt',
@@ -566,7 +594,6 @@
             'slippagePct', 'otherCost'
         ];
 
-        /* ----- Safe storage wrappers ----- */
         const storage = {
             get(key, fallback) {
                 try {
@@ -583,20 +610,12 @@
         };
 
         /* ----- state ----- */
-        let mode = 'buy'; // 'buy' or 'sell'
+        let mode = 'buy';
         let history = [];
 
         /* DOM refs */
-        const buyPriceInput = document.getElementById('buyPrice');
-        const sellPriceInput = document.getElementById('sellPrice');
         const usdtQtyInput = document.getElementById('usdtQty');
         const investmentBdtInput = document.getElementById('investmentBdt');
-        const buyFeeInput = document.getElementById('buyFee');
-        const sellFeeInput = document.getElementById('sellFee');
-        const paymentFeeInput = document.getElementById('paymentFee');
-        const networkFeeInput = document.getElementById('networkFee');
-        const slippagePctInput = document.getElementById('slippagePct');
-        const otherCostInput = document.getElementById('otherCost');
 
         const resultArea = document.getElementById('resultArea');
         const netProfitDisplay = document.getElementById('netProfitDisplay');
@@ -631,7 +650,7 @@
         }
 
         /* =========================================================
-           PERSISTENCE — SAVE & RESTORE
+           PERSISTENCE
            ========================================================= */
         function saveState() {
             const state = { mode };
@@ -645,9 +664,7 @@
         function restoreState() {
             const state = storage.get(STORAGE_KEY, null);
             if (!state) return false;
-            if (state.mode) {
-                mode = state.mode === 'sell' ? 'sell' : 'buy';
-            }
+            if (state.mode) mode = state.mode === 'sell' ? 'sell' : 'buy';
             INPUT_IDS.forEach(id => {
                 const el = document.getElementById(id);
                 if (el && state[id] !== undefined && state[id] !== null) {
@@ -657,9 +674,7 @@
             return true;
         }
 
-        function saveHistory() {
-            storage.set(HISTORY_KEY, history);
-        }
+        function saveHistory() { storage.set(HISTORY_KEY, history); }
 
         function restoreHistory() {
             const h = storage.get(HISTORY_KEY, null);
@@ -672,7 +687,7 @@
         }
 
         /* =========================================================
-           CORE CALCULATION
+           CALCULATION
            ========================================================= */
         function calculate() {
             const buyPrice = getVal('buyPrice');
@@ -840,7 +855,6 @@
            RESET
            ========================================================= */
         function resetCalculator() {
-            // clear storage first
             clearAllStorage();
 
             document.querySelectorAll('input').forEach(inp => {
@@ -900,7 +914,6 @@ Break-even Sell: ${result.beSell.toFixed(2)} BDT
             showToast('হিস্টোরি মুছে ফেলা হয়েছে');
         });
 
-        // link investment <-> quantity
         usdtQtyInput.addEventListener('input', function() {
             const buyPrice = getVal('buyPrice');
             const qty = getVal('usdtQty');
@@ -919,7 +932,6 @@ Break-even Sell: ${result.beSell.toFixed(2)} BDT
             saveState();
         });
 
-        /* Save on every input change */
         INPUT_IDS.forEach(id => {
             const el = document.getElementById(id);
             if (!el) return;
@@ -927,7 +939,6 @@ Break-even Sell: ${result.beSell.toFixed(2)} BDT
             el.addEventListener('change', saveState);
         });
 
-        /* Save before leaving */
         window.addEventListener('beforeunload', saveState);
         document.addEventListener('visibilitychange', () => {
             if (document.visibilityState === 'hidden') saveState();
@@ -939,14 +950,11 @@ Break-even Sell: ${result.beSell.toFixed(2)} BDT
         (function init() {
             const restored = restoreState();
             restoreHistory();
-            setMode(mode, true);   // apply labels + toggle active state
+            setMode(mode, true);
             renderHistory();
 
             if (restored) {
-                // If any saved state existed → don't auto-add history entry on load
-                // but still show result area if inputs are valid
                 renderResult();
-                // remove the auto-added history entry from initial render
                 history.shift();
                 saveHistory();
                 renderHistory();
@@ -956,11 +964,10 @@ Break-even Sell: ${result.beSell.toFixed(2)} BDT
         })();
 
         /* =========================================================
-           SERVICE WORKER (inline Blob — best-effort offline)
+           SERVICE WORKER (inline Blob)
            ========================================================= */
         (function registerSW() {
             if (!('serviceWorker' in navigator)) return;
-            // Only works when served over http(s) (not file://)
             if (location.protocol !== 'http:' && location.protocol !== 'https:') return;
 
             const swCode = `
@@ -985,7 +992,7 @@ Break-even Sell: ${result.beSell.toFixed(2)} BDT
                 const blob = new Blob([swCode], { type: 'application/javascript' });
                 const swUrl = URL.createObjectURL(blob);
                 navigator.serviceWorker.register(swUrl).catch(() => {});
-            } catch (e) { /* ignore */ }
+            } catch (e) {}
         })();
     })();
 </script>
