@@ -518,6 +518,7 @@
 <!-- ============ INLINE ICON + MANIFEST ============ -->
 <script>
     (function buildIcon() {
+        // ===== SVG (favicon / apple-touch-icon এর জন্য) =====
         const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
             <rect width="512" height="512" rx="96" fill="#0b1a33"/>
             <text x="50%" y="47%" font-family="Segoe UI, Arial, sans-serif" font-size="150" font-weight="700"
@@ -531,9 +532,31 @@
         document.getElementById('favIcon').href = dataUri;
         document.getElementById('appleIcon').href = dataUriB64;
 
+        // ===== PNG আইকন (manifest install icon — Chrome লোগো এড়াতে) =====
+        // Canvas দিয়ে SVG → PNG কনভার্ট করে manifest-এ PNG হিসেবে দেওয়া হচ্ছে।
+        function svgToPngDataUrl(size, bgColor) {
+            return new Promise((resolve) => {
+                const img = new Image();
+                img.onload = function () {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = size;
+                    canvas.height = size;
+                    const ctx = canvas.getContext('2d');
+                    if (bgColor) {
+                        ctx.fillStyle = bgColor;
+                        ctx.fillRect(0, 0, size, size);
+                    }
+                    ctx.drawImage(img, 0, 0, size, size);
+                    resolve(canvas.toDataURL('image/png'));
+                };
+                img.onerror = function () { resolve(dataUri); }; // fallback
+                img.src = dataUri;
+            });
+        }
+
         const manifest = {
-            name: "P2P Calculator",
-            short_name: "P2P Calculator",
+            name: "Calculator",              // ← পরিবর্তন: শুধু "Calculator"
+            short_name: "Calculator",        // ← পরিবর্তন: শুধু "Calculator"
             description: "P2P USDT/BDT Trade Calculator",
             start_url: ".",
             scope: ".",
@@ -542,15 +565,25 @@
             background_color: "#f4f7fc",
             theme_color: "#0b1a33",
             lang: "bn",
-            icons: [
-                { src: dataUri, sizes: "192x192", type: "image/svg+xml", purpose: "any" },
-                { src: dataUri, sizes: "512x512", type: "image/svg+xml", purpose: "any" },
-                { src: dataUri, sizes: "any",     type: "image/svg+xml", purpose: "maskable" }
-            ]
+            icons: []  // নিচে async ভরে দেব
         };
-        const manifestBlob = new Blob([JSON.stringify(manifest)], { type: 'application/manifest+json' });
-        const manifestUrl = URL.createObjectURL(manifestBlob);
-        document.getElementById('appManifest').href = manifestUrl;
+
+        (async function () {
+            // PNG 192 এবং 512 — maskable purpose বাদ দেওয়া হলো
+            const [png192, png512] = await Promise.all([
+                svgToPngDataUrl(192, '#0b1a33'),
+                svgToPngDataUrl(512, '#0b1a33')
+            ]);
+
+            manifest.icons = [
+                { src: png192, sizes: "192x192", type: "image/png", purpose: "any" },
+                { src: png512, sizes: "512x512", type: "image/png", purpose: "any" }
+            ];
+
+            const manifestBlob = new Blob([JSON.stringify(manifest)], { type: 'application/manifest+json' });
+            const manifestUrl = URL.createObjectURL(manifestBlob);
+            document.getElementById('appManifest').href = manifestUrl;
+        })();
     })();
 </script>
 
