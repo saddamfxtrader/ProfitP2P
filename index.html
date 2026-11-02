@@ -85,33 +85,6 @@
             color: #2c3e66;
         }
 
-        .toggle-group {
-            display: flex;
-            background: #f0f3f9;
-            border-radius: 60px;
-            padding: 4px;
-            margin-bottom: 18px;
-        }
-
-        .toggle-btn {
-            flex: 1;
-            border: none;
-            background: transparent;
-            padding: 10px 8px;
-            border-radius: 40px;
-            font-weight: 600;
-            font-size: 14px;
-            color: #4a5b7a;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .toggle-btn.active {
-            background: #ffffff;
-            color: #0f2b4f;
-            box-shadow: 0 3px 12px rgba(0, 20, 50, 0.08);
-        }
-
         .input-group {
             margin-bottom: 14px;
         }
@@ -404,21 +377,16 @@
         <p style="color: #4a5b7a; font-size: 14px;">USDT ↔ BDT · Binance · Bitget · Bybit</p>
     </div>
 
-    <!-- mode toggle -->
+    <!-- input card -->
     <div class="card">
-        <div class="toggle-group">
-            <button class="toggle-btn active" data-mode="buy" id="modeBuyBtn">📥 USDT কিনব</button>
-            <button class="toggle-btn" data-mode="sell" id="modeSellBtn">📤 USDT বিক্রি করব</button>
-        </div>
-
         <!-- buy/sell price -->
         <div class="input-row">
             <div class="input-group">
-                <label id="priceLabel">Buy Price (BDT)</label>
+                <label>Buy Price (BDT)</label>
                 <input type="number" id="buyPrice" value="118.50" min="0" step="0.01" placeholder="118.50">
             </div>
             <div class="input-group">
-                <label id="priceLabel2">Sell Price (BDT)</label>
+                <label>Sell Price (BDT)</label>
                 <input type="number" id="sellPrice" value="119.20" min="0" step="0.01" placeholder="119.20">
             </div>
         </div>
@@ -459,7 +427,7 @@
         <div class="result-card" id="resultCard">
             <div style="display: flex; justify-content: space-between; align-items: center;">
                 <h3 style="font-size: 16px; color: #0b1a33;">📊 ট্রেড ফলাফল</h3>
-                <span class="badge" id="tradeModeBadge">BUY → SELL</span>
+                <span class="badge" id="tradeModeBadge">SPREAD · BUY → SELL</span>
             </div>
 
             <div class="result-grid" id="resultGrid">
@@ -518,7 +486,6 @@
 <!-- ============ INLINE ICON + MANIFEST ============ -->
 <script>
     (function buildIcon() {
-        // ===== SVG (favicon / apple-touch-icon এর জন্য) =====
         const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
             <rect width="512" height="512" rx="96" fill="#0b1a33"/>
             <text x="50%" y="47%" font-family="Segoe UI, Arial, sans-serif" font-size="150" font-weight="700"
@@ -532,8 +499,6 @@
         document.getElementById('favIcon').href = dataUri;
         document.getElementById('appleIcon').href = dataUriB64;
 
-        // ===== PNG আইকন (manifest install icon — Chrome লোগো এড়াতে) =====
-        // Canvas দিয়ে SVG → PNG কনভার্ট করে manifest-এ PNG হিসেবে দেওয়া হচ্ছে।
         function svgToPngDataUrl(size, bgColor) {
             return new Promise((resolve) => {
                 const img = new Image();
@@ -549,14 +514,14 @@
                     ctx.drawImage(img, 0, 0, size, size);
                     resolve(canvas.toDataURL('image/png'));
                 };
-                img.onerror = function () { resolve(dataUri); }; // fallback
+                img.onerror = function () { resolve(dataUri); };
                 img.src = dataUri;
             });
         }
 
         const manifest = {
-            name: "Calculator",              // ← পরিবর্তন: শুধু "Calculator"
-            short_name: "Calculator",        // ← পরিবর্তন: শুধু "Calculator"
+            name: "Calculator",
+            short_name: "Calculator",
             description: "P2P USDT/BDT Trade Calculator",
             start_url: ".",
             scope: ".",
@@ -565,11 +530,10 @@
             background_color: "#f4f7fc",
             theme_color: "#0b1a33",
             lang: "bn",
-            icons: []  // নিচে async ভরে দেব
+            icons: []
         };
 
         (async function () {
-            // PNG 192 এবং 512 — maskable purpose বাদ দেওয়া হলো
             const [png192, png512] = await Promise.all([
                 svgToPngDataUrl(192, '#0b1a33'),
                 svgToPngDataUrl(512, '#0b1a33')
@@ -616,8 +580,8 @@
         /* =========================================================
            STORAGE KEYS
            ========================================================= */
-        const STORAGE_KEY = 'p2pCalcState_v1';
-        const HISTORY_KEY = 'p2pCalcHistory_v1';
+        const STORAGE_KEY = 'p2pCalcState_v2';
+        const HISTORY_KEY = 'p2pCalcHistory_v2';
 
         const INPUT_IDS = [
             'buyPrice', 'sellPrice',
@@ -642,7 +606,6 @@
         };
 
         /* ----- state ----- */
-        let mode = 'buy';
         let history = [];
 
         /* DOM refs */
@@ -708,7 +671,7 @@
            PERSISTENCE
            ========================================================= */
         function saveState() {
-            const state = { mode };
+            const state = {};
             INPUT_IDS.forEach(id => {
                 const el = document.getElementById(id);
                 if (el) state[id] = el.value;
@@ -719,7 +682,6 @@
         function restoreState() {
             const state = storage.get(STORAGE_KEY, null);
             if (!state) return false;
-            if (state.mode) mode = state.mode === 'sell' ? 'sell' : 'buy';
             INPUT_IDS.forEach(id => {
                 const el = document.getElementById(id);
                 if (el && state[id] !== undefined && state[id] !== null) {
@@ -744,6 +706,7 @@
         /* =========================================================
            CALCULATION CORE
            সব fee BDT, slippage sell-side revenue-এর %।
+           (আগের মতোই অপরিবর্তিত)
            ========================================================= */
         function calculate() {
             const buyPrice = readPositive('buyPrice', 'Buy Price');
@@ -800,7 +763,6 @@
 
         /* =========================================================
            RENDER RESULT
-           saveToHistory=true হলে তবেই history-তে যায়।
            ========================================================= */
         function renderResult({ saveToHistory = false } = {}) {
             let result;
@@ -847,7 +809,8 @@
                 warningBox.classList.remove('hidden');
             }
 
-            tradeModeBadge.textContent = mode === 'buy' ? 'BUY → SELL' : 'SELL → BUY';
+            /* স্থির badge — mode-নির্ভর নয় */
+            tradeModeBadge.textContent = 'SPREAD · BUY → SELL';
 
             if (saveToHistory) {
                 addHistory(result);
@@ -892,29 +855,7 @@
         }
 
         /* =========================================================
-           MODE TOGGLE
-           Label সবসময় একই অর্থ রাখে: Buy Price / Sell Price।
-           Mode শুধু starting side বোঝায় (badge-এ)।
-           ========================================================= */
-        function setMode(newMode, skipCalc) {
-            mode = newMode;
-            document.querySelectorAll('.toggle-btn').forEach(btn => {
-                btn.classList.toggle('active', btn.dataset.mode === mode);
-            });
-
-            document.getElementById('priceLabel').textContent = 'Buy Price (BDT)';
-            document.getElementById('priceLabel2').textContent = 'Sell Price (BDT)';
-
-            saveState();
-
-            if (!skipCalc && !resultArea.classList.contains('hidden')) {
-                renderResult({ saveToHistory: false });
-            }
-        }
-
-        /* =========================================================
            QTY / INVESTMENT SYNC
-           Quantity source ধরে investment আপডেট; buy price বদলালেও sync।
            ========================================================= */
         function syncInvestmentFromQty() {
             const buyPrice = Number(document.getElementById('buyPrice').value);
@@ -951,7 +892,6 @@
             document.getElementById('slippagePct').value = '0.2';
             document.getElementById('otherCost').value = '0';
 
-            setMode('buy', true);
             resultArea.classList.add('hidden');
             history = [];
             renderHistory();
@@ -995,9 +935,6 @@ Max Buy (break-even): ${result.beBuy.toFixed(2)} BDT
         /* =========================================================
            EVENT BINDING
            ========================================================= */
-        document.getElementById('modeBuyBtn').addEventListener('click', () => setMode('buy'));
-        document.getElementById('modeSellBtn').addEventListener('click', () => setMode('sell'));
-
         document.getElementById('calculateBtn').addEventListener('click', () => {
             renderResult({ saveToHistory: true });
         });
@@ -1045,7 +982,6 @@ Max Buy (break-even): ${result.beBuy.toFixed(2)} BDT
         (function init() {
             const restored = restoreState();
             restoreHistory();
-            setMode(mode, true);
             renderHistory();
 
             if (restored) {
@@ -1057,14 +993,13 @@ Max Buy (break-even): ${result.beBuy.toFixed(2)} BDT
 
         /* =========================================================
            SERVICE WORKER (Blob URL)
-           নোট: best-effort। স্থায়ী offline caching-এর জন্য আলাদা sw.js দরকার।
            ========================================================= */
         (function registerSW() {
             if (!('serviceWorker' in navigator)) return;
             if (location.protocol !== 'http:' && location.protocol !== 'https:') return;
 
             const swCode = `
-                const CACHE = 'p2p-calc-v1';
+                const CACHE = 'p2p-calc-v2';
                 self.addEventListener('install', e => { self.skipWaiting(); });
                 self.addEventListener('activate', e => { e.waitUntil(self.clients.claim()); });
                 self.addEventListener('fetch', e => {
