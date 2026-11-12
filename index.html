@@ -412,10 +412,6 @@
             <div class="fee-grid">
                 <div class="fee-item"><span>Buy Fee</span> <input type="number" id="buyFee" value="0" min="0" step="0.01" placeholder="0"></div>
                 <div class="fee-item"><span>Sell Fee</span> <input type="number" id="sellFee" value="0" min="0" step="0.01" placeholder="0"></div>
-                <div class="fee-item"><span>Payment Fee</span> <input type="number" id="paymentFee" value="0" min="0" step="0.01" placeholder="0"></div>
-                <div class="fee-item"><span>Network/Transfer</span> <input type="number" id="networkFee" value="0" min="0" step="0.01" placeholder="0"></div>
-                <div class="fee-item"><span>Slippage (%)</span> <input type="number" id="slippagePct" value="0.2" min="0" max="99.99" step="0.1" placeholder="0"></div>
-                <div class="fee-item"><span>অন্যান্য (BDT)</span> <input type="number" id="otherCost" value="0" min="0" step="0.01" placeholder="0"></div>
             </div>
         </div>
 
@@ -449,7 +445,6 @@
             <div class="breakdown" id="breakdownArea">
                 <div class="breakdown-row"><span>Gross Profit</span><span class="amount" id="grossProfitDisplay">৳ 0.00</span></div>
                 <div class="breakdown-row"><span>মোট ফি (BDT)</span><span class="amount" id="totalFeesDisplay">৳ 0.00</span></div>
-                <div class="breakdown-row"><span>Slippage cost</span><span class="amount" id="slippageCostDisplay">৳ 0.00</span></div>
                 <div class="breakdown-row" style="font-weight: 600; border-top: 1px solid #dce2ec; padding-top: 8px; margin-top: 4px;">
                     <span>নিট লাভ (Net Profit)</span>
                     <span class="amount" id="netProfitBreakdown">৳ 0.00</span>
@@ -580,14 +575,13 @@
         /* =========================================================
            STORAGE KEYS
            ========================================================= */
-        const STORAGE_KEY = 'p2pCalcState_v2';
-        const HISTORY_KEY = 'p2pCalcHistory_v2';
+        const STORAGE_KEY = 'p2pCalcState_v3';
+        const HISTORY_KEY = 'p2pCalcHistory_v3';
 
         const INPUT_IDS = [
             'buyPrice', 'sellPrice',
             'usdtQty', 'investmentBdt',
-            'buyFee', 'sellFee', 'paymentFee', 'networkFee',
-            'slippagePct', 'otherCost'
+            'buyFee', 'sellFee'
         ];
 
         const storage = {
@@ -623,7 +617,6 @@
         const beBuyDisplay = document.getElementById('beBuyDisplay');
         const grossProfitDisplay = document.getElementById('grossProfitDisplay');
         const totalFeesDisplay = document.getElementById('totalFeesDisplay');
-        const slippageCostDisplay = document.getElementById('slippageCostDisplay');
         const netProfitBreakdown = document.getElementById('netProfitBreakdown');
         const warningBox = document.getElementById('warningBox');
         const tradeModeBadge = document.getElementById('tradeModeBadge');
@@ -705,8 +698,7 @@
 
         /* =========================================================
            CALCULATION CORE
-           সব fee BDT, slippage sell-side revenue-এর %।
-           (আগের মতোই অপরিবর্তিত)
+           সব fee BDT (buyFee + sellFee)।
            ========================================================= */
         function calculate() {
             const buyPrice = readPositive('buyPrice', 'Buy Price');
@@ -715,25 +707,14 @@
 
             const buyFee = readNonNegative('buyFee', 'Buy Fee');
             const sellFee = readNonNegative('sellFee', 'Sell Fee');
-            const paymentFee = readNonNegative('paymentFee', 'Payment Fee');
-            const networkFee = readNonNegative('networkFee', 'Network Fee');
-            const otherCost = readNonNegative('otherCost', 'অন্যান্য খরচ');
-
-            const slippageRateRaw = readNonNegative('slippagePct', 'Slippage');
-            if (slippageRateRaw >= 100) {
-                throw new Error('Slippage 100% এর কম হতে হবে।');
-            }
-            const slippageRate = slippageRateRaw / 100;
 
             const buyCost = usdtQty * buyPrice;
             const sellRevenue = usdtQty * sellPrice;
             const grossProfit = sellRevenue - buyCost;
 
-            const totalFixedFees =
-                buyFee + sellFee + paymentFee + networkFee + otherCost;
+            const totalFixedFees = buyFee + sellFee;
 
-            const slippageCost = sellRevenue * slippageRate;
-            const totalCost = totalFixedFees + slippageCost;
+            const totalCost = totalFixedFees;
             const netProfit = grossProfit - totalCost;
 
             const capitalUsed = buyCost + totalFixedFees;
@@ -744,18 +725,17 @@
 
             const profitPerUsdt = netProfit / usdtQty;
 
-            const beSell = (buyCost + totalFixedFees) /
-                (usdtQty * (1 - slippageRate));
+            const beSell = (buyCost + totalFixedFees) / usdtQty;
 
             const beBuy = Math.max(
                 0,
-                sellPrice * (1 - slippageRate) - totalFixedFees / usdtQty
+                sellPrice - totalFixedFees / usdtQty
             );
 
             return {
                 buyPrice, sellPrice, usdtQty,
                 buyCost, sellRevenue, grossProfit,
-                totalFixedFees, slippageCost, totalCost,
+                totalFixedFees, totalCost,
                 capitalUsed, netProfit, roi, profitPerUsdt,
                 beSell, beBuy
             };
@@ -794,7 +774,6 @@
 
             grossProfitDisplay.textContent = fmt(result.grossProfit);
             totalFeesDisplay.textContent = fmt(result.totalFixedFees);
-            slippageCostDisplay.textContent = fmt(result.slippageCost);
             netProfitBreakdown.textContent = fmt(result.netProfit);
 
             warningBox.classList.add('hidden');
@@ -802,7 +781,7 @@
                 warningBox.textContent = '⚠️ এই ট্রেডে সম্ভাব্য ক্ষতি হবে। Break-even price দেখে নিন।';
                 warningBox.classList.remove('hidden');
             } else if (result.netProfit < 50 && result.capitalUsed > 1000) {
-                warningBox.textContent = 'ℹ️ মুনাফা খুব কম। ফি বা স্লিপেজ পরীক্ষা করুন।';
+                warningBox.textContent = 'ℹ️ মুনাফা খুব কম। ফি পরীক্ষা করুন।';
                 warningBox.classList.remove('hidden');
             } else if (result.grossProfit > 0 && result.totalCost > Math.abs(result.grossProfit) * 0.3) {
                 warningBox.textContent = '🧾 ফি ও খরচ মুনাফার তুলনায় বেশি। নেট লাভ কম হতে পারে।';
@@ -887,10 +866,6 @@
             document.getElementById('investmentBdt').value = '118500';
             document.getElementById('buyFee').value = '0';
             document.getElementById('sellFee').value = '0';
-            document.getElementById('paymentFee').value = '0';
-            document.getElementById('networkFee').value = '0';
-            document.getElementById('slippagePct').value = '0.2';
-            document.getElementById('otherCost').value = '0';
 
             resultArea.classList.add('hidden');
             history = [];
@@ -917,7 +892,6 @@ Buy: ${result.buyPrice.toFixed(2)} BDT | Sell: ${result.sellPrice.toFixed(2)} BD
 USDT: ${result.usdtQty.toFixed(2)} | Capital Used: ${result.capitalUsed.toFixed(2)} BDT
 Gross Profit: ${result.grossProfit.toFixed(2)} BDT
 Fixed Fees: ${result.totalFixedFees.toFixed(2)} BDT
-Slippage Cost: ${result.slippageCost.toFixed(2)} BDT
 Total Cost: ${result.totalCost.toFixed(2)} BDT
 Net Profit: ${result.netProfit.toFixed(2)} BDT
 ROI: ${result.roi.toFixed(2)}%
@@ -999,7 +973,7 @@ Max Buy (break-even): ${result.beBuy.toFixed(2)} BDT
             if (location.protocol !== 'http:' && location.protocol !== 'https:') return;
 
             const swCode = `
-                const CACHE = 'p2p-calc-v2';
+                const CACHE = 'p2p-calc-v3';
                 self.addEventListener('install', e => { self.skipWaiting(); });
                 self.addEventListener('activate', e => { e.waitUntil(self.clients.claim()); });
                 self.addEventListener('fetch', e => {
