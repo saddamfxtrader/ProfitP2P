@@ -236,24 +236,6 @@
             grid-column: span 2;
         }
 
-        .breakdown {
-            margin-top: 16px;
-            border-top: 1px solid #e3eaf3;
-            padding-top: 16px;
-        }
-
-        .breakdown-row {
-            display: flex;
-            justify-content: space-between;
-            font-size: 14px;
-            padding: 4px 0;
-            color: #1f344f;
-        }
-
-        .breakdown-row .amount {
-            font-weight: 500;
-        }
-
         .warning-box {
             background: #fef7e8;
             border-left: 4px solid #f59e0b;
@@ -436,20 +418,9 @@
                 <div class="result-item"><div class="label">মোট বিনিয়োগ</div><div class="value" id="totalInvestmentDisplay">৳ 0</div></div>
                 <div class="result-item"><div class="label">মোট আয়</div><div class="value" id="totalRevenueDisplay">৳ 0</div></div>
                 <div class="result-item"><div class="label">মোট ফি ও খরচ</div><div class="value" id="totalCostDisplay">৳ 0</div></div>
-                <div class="result-item"><div class="label">Break-even Sell</div><div class="value" id="beSellDisplay">৳ 0.00</div></div>
-                <div class="result-item"><div class="label">Max Buy (break-even)</div><div class="value" id="beBuyDisplay">৳ 0.00</div></div>
             </div>
 
             <div id="warningBox" class="warning-box hidden"></div>
-
-            <div class="breakdown" id="breakdownArea">
-                <div class="breakdown-row"><span>Gross Profit</span><span class="amount" id="grossProfitDisplay">৳ 0.00</span></div>
-                <div class="breakdown-row"><span>মোট ফি (BDT)</span><span class="amount" id="totalFeesDisplay">৳ 0.00</span></div>
-                <div class="breakdown-row" style="font-weight: 600; border-top: 1px solid #dce2ec; padding-top: 8px; margin-top: 4px;">
-                    <span>নিট লাভ (Net Profit)</span>
-                    <span class="amount" id="netProfitBreakdown">৳ 0.00</span>
-                </div>
-            </div>
 
             <div class="flex mt-2">
                 <button class="btn-secondary" id="resetBtn">↺ রিসেট</button>
@@ -613,11 +584,6 @@
         const totalInvestmentDisplay = document.getElementById('totalInvestmentDisplay');
         const totalRevenueDisplay = document.getElementById('totalRevenueDisplay');
         const totalCostDisplay = document.getElementById('totalCostDisplay');
-        const beSellDisplay = document.getElementById('beSellDisplay');
-        const beBuyDisplay = document.getElementById('beBuyDisplay');
-        const grossProfitDisplay = document.getElementById('grossProfitDisplay');
-        const totalFeesDisplay = document.getElementById('totalFeesDisplay');
-        const netProfitBreakdown = document.getElementById('netProfitBreakdown');
         const warningBox = document.getElementById('warningBox');
         const tradeModeBadge = document.getElementById('tradeModeBadge');
         const historyList = document.getElementById('historyList');
@@ -769,12 +735,6 @@
             totalInvestmentDisplay.textContent = fmtInt(result.capitalUsed);
             totalRevenueDisplay.textContent = fmtInt(result.sellRevenue);
             totalCostDisplay.textContent = fmt(result.totalCost);
-            beSellDisplay.textContent = fmt(result.beSell);
-            beBuyDisplay.textContent = fmt(result.beBuy);
-
-            grossProfitDisplay.textContent = fmt(result.grossProfit);
-            totalFeesDisplay.textContent = fmt(result.totalFixedFees);
-            netProfitBreakdown.textContent = fmt(result.netProfit);
 
             warningBox.classList.add('hidden');
             if (result.netProfit < 0) {
